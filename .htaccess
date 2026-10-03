@@ -1,0 +1,51 @@
+# ============================================================
+#  HNIM · Apache / Nginx 通用配置
+#  放到程序根目录即可生效（Apache 自动读取 .htaccess）
+# ============================================================
+
+# 默认首页
+DirectoryIndex index.php
+
+# 敏感目录禁止访问
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteRule ^(app|config|data)/ - [F,L,NC]
+    RewriteRule ^router\.php$ - [F,L,NC]
+
+    # 已存在的文件与目录直接返回（静态资源、api.php、admin.php）
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 带扩展名却不存在的文件（install.php 已删、文件名打错）→ 真 404，
+    # 不要丢给首页，否则会看到首页内容，误以为程序装好了
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_URI} \.[A-Za-z0-9]{2,5}$ [NC]
+    RewriteRule ^ - [R=404,L]
+
+    # 其余（/、/admin/ 之类）全部交给 index.php
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# 不暴露目录列表
+Options -Indexes
+
+# 基础安全响应头
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "no-referrer"
+</IfModule>
+
+# 允许前端调用的方法
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "SAMEORIGIN"
+</IfModule>
+
+# 上传体积（与 .user.ini 一致，双保险）
+<IfModule mod_php.c>
+    php_value upload_max_filesize 50M
+    php_value post_max_size 52M
+    php_flag  display_errors off
+</IfModule>
